@@ -1,16 +1,40 @@
 import {
+  type RxJsonSchema,
   toTypedRxJsonSchema,
   type ExtractDocumentTypeFromTypedRxJsonSchema,
   type RxCollection,
+  type RxDocument,
   type RxDatabase,
-  type RxJsonSchema,
 } from "rxdb";
-export const tasksSchemaLiteral = {
+
+export const userSchemaLiteral = {
+  title: "user schema",
+  description: "describes a user",
   version: 0,
-  primaryKey: "id",
+  primaryKey: "userId",
   type: "object",
   properties: {
-    id: {
+    userId: {
+      type: "string",
+      maxLength: 100,
+    },
+    username: {
+      type: "string",
+      maxLength: 100,
+    },
+  },
+  required: ["username", "userId"],
+  indexes: ["username"],
+} as const;
+
+export const taskSchemaLiteral = {
+  title: "task schema",
+  description: "describes a task",
+  version: 0,
+  primaryKey: "taskId",
+  type: "object",
+  properties: {
+    taskId: {
       type: "string",
       maxLength: 100,
     },
@@ -42,21 +66,37 @@ export const tasksSchemaLiteral = {
       type: "string",
       format: "date-time",
     },
+    userId: {
+      type: "string",
+      maxLength: 100,
+    },
   },
-  required: ["id", "title", "checklist", "timestamp"],
+  required: ["taskId", "title", "checklist", "timestamp", "userId"],
+  indexes: ["userId"],
 } as const;
-const schemaTyped = toTypedRxJsonSchema(tasksSchemaLiteral);
 
+const userSchemaTyped = toTypedRxJsonSchema(userSchemaLiteral);
+const taskSchemaTyped = toTypedRxJsonSchema(taskSchemaLiteral);
+
+export type UserDocType = ExtractDocumentTypeFromTypedRxJsonSchema<
+  typeof userSchemaTyped
+>;
 export type TaskDocType = ExtractDocumentTypeFromTypedRxJsonSchema<
-  typeof schemaTyped
+  typeof taskSchemaTyped
 >;
 
-export const taskSchema: RxJsonSchema<TaskDocType> = tasksSchemaLiteral;
+export const userSchema: RxJsonSchema<UserDocType> = userSchemaLiteral;
+export const taskSchema: RxJsonSchema<TaskDocType> = taskSchemaLiteral;
 
+export type UserDocument = RxDocument<UserDocType>;
+export type UserCollection = RxCollection<UserDocType>;
+
+export type TaskDocument = RxDocument<TaskDocType>;
 export type TaskCollection = RxCollection<TaskDocType>;
 
-export type DatabaseCollections = {
+export type CendasDatabaseCollections = {
+  users: UserCollection;
   tasks: TaskCollection;
 };
 
-export type CendasDatabase = RxDatabase<DatabaseCollections>;
+export type CendasDatabase = RxDatabase<CendasDatabaseCollections>;

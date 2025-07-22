@@ -1,18 +1,21 @@
-import React, { useEffect, useRef, useState } from "react";
-import { Stage, Layer, Image, Circle, Shape } from "react-konva";
+import { useEffect, useRef, useState } from "react";
+import { Stage, Layer, Image, Shape } from "react-konva";
 import Konva from "konva";
 import useImage from "use-image";
+import type { TaskDocType } from "@/types/schemas";
 
 interface ConstructionPlanKonvaProps {
   imageUrl: string;
+  tasks?: Array<TaskDocType>;
+  pinColor?: string;
 }
 
-export default function ConstructionPlanKonva({
+export default function InteractiveCanvas({
   imageUrl,
 }: ConstructionPlanKonvaProps) {
   const stageRef = useRef<Konva.Stage>(null);
   const [image] = useImage(imageUrl, "anonymous");
-  const [circles, setCircles] = useState<Array<any>>([
+  const [taskList, setTaskList] = useState<Array<any>>([
     {
       x: 959.7698097033505,
       y: 366.02753430245855,
@@ -102,8 +105,14 @@ export default function ConstructionPlanKonva({
   };
 
   const handleStageClick = (e: Konva.KonvaEventObject<MouseEvent>) => {
-    // don't add circles on drag
-    if (e.target.getStage()?.isDragging()) {
+    // Only create a pin if the click is on the stage background or the main image.
+    // This prevents creating a new pin when clicking on an existing pin or its layer.
+    if (e.target.className !== "Stage" && e.target.className !== "Image") {
+      return;
+    }
+
+    // Don't add a pin on drag.
+    if (e.target.isDragging()) {
       return;
     }
     const pos = e.target.getStage()?.getRelativePointerPosition();
@@ -116,8 +125,8 @@ export default function ConstructionPlanKonva({
       id: Date.now().toString(),
     });
     // Add new circle
-    setCircles([
-      ...circles,
+    setTaskList([
+      ...taskList,
       {
         x: pos.x,
         y: pos.y,
@@ -128,8 +137,16 @@ export default function ConstructionPlanKonva({
     ]);
   };
 
+  const handlePinClick = (
+    e: Konva.KonvaEventObject<MouseEvent>,
+    taskId: string
+  ) => {
+    if (window.confirm("Are you sure you want to delete this pin?")) {
+      setTaskList((prevTasks) => prevTasks.filter((task) => task.id !== taskId));
+    }
+  };
+
   const handleDragEnd = (e: Konva.KonvaEventObject<DragEvent>) => {
-    // Update React state with new position
     setStageTransform({
       ...stageTransform,
       x: e.target.x(),
@@ -166,58 +183,51 @@ export default function ConstructionPlanKonva({
           <Image image={image} />
         </Layer>
         <Layer>
-          {circles.map((circle) => (
-            <Circle
-              key={circle.id}
-              x={circle.x}
-              y={circle.y}
-              radius={circle.radius}
-              fill={circle.fill}
+          {taskList.map((task) => (
+            <Shape
+              key={task.id}
+              x={task.x}
+              y={task.y}
+              width={30}
+              height={45}
+              offsetX={30 / 2}
+              offsetY={45}
+              scaleX={1 / stageTransform.scale}
+              scaleY={1 / stageTransform.scale}
+              onClick={(e) => handlePinClick(e, task.id)}
+              sceneFunc={function (context, shape) {
+                const width = shape.width();
+                const height = shape.height();
+                const radius = width / 2;
+
+                context.beginPath();
+                context.moveTo(0, radius); // Start at left side of circle
+                // Top arc
+                context.arc(radius, radius, radius, Math.PI, 0, false);
+                // Right curve to tip
+                context.quadraticCurveTo(width, height * 0.65, radius, height);
+                // Left curve from tip to start
+                context.quadraticCurveTo(0, height * 0.65, 0, radius);
+                context.closePath();
+
+                // (!) Konva specific method, it is very important
+                context.fillStrokeShape(shape);
+
+                // Add text inside the pin
+                const text = "AB";
+                context.font = "bold 13px Arial";
+                context.fillStyle = "white";
+                context.textAlign = "center";
+                context.textBaseline = "middle";
+                // Position text in the center of the circular part of the pin
+                context.fillText(text, radius, radius);
+              }}
+              fill="#E53E3E" // A classic red for a pin
+              stroke="black"
+              strokeWidth={2}
+              draggable
             />
           ))}
-        </Layer>
-        <Layer>
-          <Shape
-            x={300}
-            y={300}
-            width={30}
-            height={45}
-            offsetX={30 / 2}
-            offsetY={45}
-            scaleX={1 / stageTransform.scale}
-            scaleY={1 / stageTransform.scale}
-            sceneFunc={function (context, shape) {
-              const width = shape.width();
-              const height = shape.height();
-              const radius = width / 2;
-
-              context.beginPath();
-              context.moveTo(0, radius); // Start at left side of circle
-              // Top arc
-              context.arc(radius, radius, radius, Math.PI, 0, false);
-              // Right curve to tip
-              context.quadraticCurveTo(width, height * 0.65, radius, height);
-              // Left curve from tip to start
-              context.quadraticCurveTo(0, height * 0.65, 0, radius);
-              context.closePath();
-
-              // (!) Konva specific method, it is very important
-              context.fillStrokeShape(shape);
-
-              // Add text inside the pin
-              const text = "AB";
-              context.font = "bold 13px Arial";
-              context.fillStyle = "white";
-              context.textAlign = "center";
-              context.textBaseline = "middle";
-              // Position text in the center of the circular part of the pin
-              context.fillText(text, radius, radius);
-            }}
-            fill="#E53E3E" // A classic red for a pin
-            stroke="black"
-            strokeWidth={2}
-            draggable
-          />
         </Layer>
       </Stage>
     </div>

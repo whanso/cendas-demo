@@ -12,10 +12,14 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useDatabase } from "@/components/DatabaseProvider";
 import { login } from "@/auth";
+import type { UserDocType } from "@/types/schemas";
+
+const colors = ["#E53E3E", "#38A169", "#3182CE", "#805AD5", "#D53F8C"];
 
 export function LoginForm() {
   const db = useDatabase();
   const [username, setUsername] = useState("");
+  const [selectedColor, setSelectedColor] = useState("");
   const [error, setError] = useState<string | null>(null);
 
   const handleLogin = async () => {
@@ -39,6 +43,10 @@ export function LoginForm() {
 
   const handleJoin = async () => {
     if (!username) return;
+    if (!selectedColor) {
+      setError("Please select a color.");
+      return;
+    }
     setError(null);
 
     const existingUser = await db.users
@@ -55,15 +63,14 @@ export function LoginForm() {
     }
 
     try {
-      const newUser = {
+      const newUser: UserDocType = {
         userId: crypto.randomUUID(),
         username,
+        userColor: selectedColor,
       };
       const user = await db.users.insert(newUser);
-      console.log("User created:", user.toJSON());
       await login(user.toJSON());
     } catch (error) {
-      console.error("Error creating user:", error);
       setError("An unexpected error occurred while creating the user.");
     }
   };
@@ -90,8 +97,29 @@ export function LoginForm() {
             }}
             onKeyDown={(e) => e.key === "Enter" && handleLogin()}
           />
-          {error && <p className="text-sm text-red-500 pt-2">{error}</p>}
         </div>
+        <div className="grid gap-2">
+          <Label>Choose a color</Label>
+          <div className="flex gap-2 pt-1">
+            {colors.map((color) => (
+              <button
+                key={color}
+                type="button"
+                onClick={() => {
+                  setSelectedColor(color);
+                  setError(null);
+                }}
+                className={`w-8 h-8 rounded-full border-2 border-input transition-all ${
+                  selectedColor === color
+                    ? "ring-2 ring-ring ring-offset-2"
+                    : ""
+                }`}
+                style={{ backgroundColor: color }}
+              />
+            ))}
+          </div>
+        </div>
+        {error && <p className="text-sm text-red-500">{error}</p>}
       </CardContent>
       <CardFooter className="flex flex-col gap-2">
         <Button type="button" className="w-full" onClick={handleLogin}>

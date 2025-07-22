@@ -22,8 +22,11 @@ export const userSchemaLiteral = {
       type: "string",
       maxLength: 100,
     },
+    userColor: {
+      type: "string",
+    },
   },
-  required: ["username", "userId"],
+  required: ["username", "userId", "userColor"],
   indexes: ["username"],
 } as const;
 

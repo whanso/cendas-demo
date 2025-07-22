@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import { type RxDatabase, type RxState } from "rxdb/plugins/core";
+import { type RxDatabase } from "rxdb/plugins/core";
 import { getDatabase } from "@/database";
 import { type CendasDatabase, type UserDocType } from "@/types/schemas";
 

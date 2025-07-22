@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { getDatabase } from "./database";
-import { type CendasDatabase, type UserDocType } from "./types/schemas";
+import { type UserDocType } from "./types/schemas";
 import type { RxState } from "rxdb";
 
 /**

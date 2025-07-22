@@ -25,28 +25,31 @@ export default function ConstructionPlanKonva({
   // Reference to parent container
   const containerRef = useRef<HTMLDivElement>(null);
 
-  // State to track current scale and dimensions
-  const [stageSize, setStageSize] = useState({
-    width: 0,
-    height: 0,
-    scale: 1,
-  });
+  // State to track stage dimensions
+  const [stageSize, setStageSize] = useState({ width: 0, height: 0 });
 
   // Function to handle resize
   const updateSize = () => {
-    if (!containerRef.current || !image) return;
+    if (!containerRef.current || !image || !stageRef.current) return;
 
     const { offsetWidth: containerWidth, offsetHeight: containerHeight } =
       containerRef.current;
 
+    // Update stage size to fill the container
+    setStageSize({ width: containerWidth, height: containerHeight });
+
+    const stage = stageRef.current;
+
+    // Calculate scale and position to fit and center the image within the stage
     const scaleX = containerWidth / image.width;
     const scaleY = containerHeight / image.height;
     const scale = Math.min(scaleX, scaleY);
 
-    setStageSize({
-      width: image.width * scale,
-      height: image.height * scale,
-      scale: scale,
+    // Transform the stage to apply the new scale and position
+    stage.scale({ x: scale, y: scale });
+    stage.position({
+      x: (containerWidth - image.width * scale) / 2,
+      y: (containerHeight - image.height * scale) / 2,
     });
   };
 
@@ -125,13 +128,15 @@ export default function ConstructionPlanKonva({
   }, [image]);
 
   return (
-    <div ref={containerRef} style={{ width: "100%", height: "100%" }}>
+    <div
+      id="canvas-container"
+      ref={containerRef}
+      style={{ width: "100%", height: "100%" }}
+    >
       <Stage
         ref={stageRef}
         width={stageSize.width}
         height={stageSize.height}
-        scaleX={stageSize.scale}
-        scaleY={stageSize.scale}
         draggable
         onWheel={handleWheel}
         onClick={handleStageClick}

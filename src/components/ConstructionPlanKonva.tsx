@@ -27,6 +27,11 @@ export default function ConstructionPlanKonva({
 
   // State to track stage dimensions
   const [stageSize, setStageSize] = useState({ width: 0, height: 0 });
+  const [stageTransform, setStageTransform] = useState({
+    scale: 1,
+    x: 0,
+    y: 0,
+  });
 
   // Function to handle resize
   const updateSize = () => {
@@ -45,12 +50,15 @@ export default function ConstructionPlanKonva({
     const scaleY = containerHeight / image.height;
     const scale = Math.min(scaleX, scaleY);
 
+    const x = (containerWidth - image.width * scale) / 2;
+    const y = (containerHeight - image.height * scale) / 2;
+
     // Transform the stage to apply the new scale and position
     stage.scale({ x: scale, y: scale });
-    stage.position({
-      x: (containerWidth - image.width * scale) / 2,
-      y: (containerHeight - image.height * scale) / 2,
-    });
+    stage.position({ x, y });
+
+    // Update React state
+    setStageTransform({ scale, x, y });
   };
 
   const handleWheel = (e: Konva.KonvaEventObject<WheelEvent>) => {
@@ -88,6 +96,9 @@ export default function ConstructionPlanKonva({
       y: pointer.y - mousePointTo.y * newScale,
     };
     stage.position(newPos);
+
+    // Update React state
+    setStageTransform({ scale: newScale, x: newPos.x, y: newPos.y });
   };
 
   const handleStageClick = (e: Konva.KonvaEventObject<MouseEvent>) => {
@@ -117,6 +128,15 @@ export default function ConstructionPlanKonva({
     ]);
   };
 
+  const handleDragEnd = (e: Konva.KonvaEventObject<DragEvent>) => {
+    // Update React state with new position
+    setStageTransform({
+      ...stageTransform,
+      x: e.target.x(),
+      y: e.target.y(),
+    });
+  };
+
   // Update on mount, when window resizes, or when image loads
   useEffect(() => {
     updateSize();
@@ -140,6 +160,7 @@ export default function ConstructionPlanKonva({
         draggable
         onWheel={handleWheel}
         onClick={handleStageClick}
+        onDragEnd={handleDragEnd}
       >
         <Layer>
           <Image image={image} />
@@ -159,8 +180,12 @@ export default function ConstructionPlanKonva({
           <Shape
             x={300}
             y={300}
-            width={50}
-            height={75}
+            width={30}
+            height={45}
+            offsetX={30 / 2}
+            offsetY={45}
+            scaleX={1 / stageTransform.scale}
+            scaleY={1 / stageTransform.scale}
             sceneFunc={function (context, shape) {
               const width = shape.width();
               const height = shape.height();
@@ -181,7 +206,7 @@ export default function ConstructionPlanKonva({
 
               // Add text inside the pin
               const text = "AB";
-              context.font = "bold 18px Arial";
+              context.font = "bold 13px Arial";
               context.fillStyle = "white";
               context.textAlign = "center";
               context.textBaseline = "middle";

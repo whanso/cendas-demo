@@ -1,22 +1,17 @@
 import React, { useEffect, useRef, useState } from "react";
-import { render } from "react-dom";
-import { Stage, Layer, Rect, Text, Image, Circle } from "react-konva";
+import { Stage, Layer, Image, Circle } from "react-konva";
 import Konva from "konva";
 import useImage from "use-image";
 
-const URLImage = ({ src, ...rest }) => {
-  const [image] = useImage(src, "anonymous");
-  return <Image image={image} {...rest} />;
-};
-
-interface ConstructionPlan2Props {
+interface ConstructionPlanKonvaProps {
   imageUrl: string;
 }
 
 export default function ConstructionPlanKonva({
   imageUrl,
-}: ConstructionPlan2Props) {
-  const stageRef = useRef(null);
+}: ConstructionPlanKonvaProps) {
+  const stageRef = useRef<Konva.Stage>(null);
+  const [image] = useImage(imageUrl, "anonymous");
   const [circles, setCircles] = useState<Array<any>>([
     {
       x: 959.7698097033505,
@@ -27,38 +22,31 @@ export default function ConstructionPlanKonva({
     },
   ]);
 
-  // Define virtual size for our scene
-  const sceneWidth = 1000;
-  const sceneHeight = 1000;
   // Reference to parent container
-  const containerRef = useRef(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  // State to track current scale and dimensions
+  const [stageSize, setStageSize] = useState({
+    width: 0,
+    height: 0,
+    scale: 1,
+  });
 
   // Function to handle resize
   const updateSize = () => {
-    if (!containerRef.current) return;
+    if (!containerRef.current || !image) return;
 
-    // Get container width
     const containerWidth = containerRef.current.offsetWidth;
+    const scale = containerWidth / image.width;
 
-    // Calculate scale
-    const scale = containerWidth / sceneWidth;
-
-    // Update state with new dimensions
     setStageSize({
-      width: sceneWidth * scale,
-      height: sceneHeight * scale,
+      width: image.width * scale,
+      height: image.height * scale,
       scale: scale,
     });
   };
 
-  // State to track current scale and dimensions
-  const [stageSize, setStageSize] = useState({
-    width: sceneWidth,
-    height: sceneHeight,
-    scale: 1,
-  });
-
-  const handleWheel = (e) => {
+  const handleWheel = (e: Konva.KonvaEventObject<WheelEvent>) => {
     e.evt.preventDefault();
 
     const stage = stageRef.current;
@@ -66,6 +54,8 @@ export default function ConstructionPlanKonva({
 
     const oldScale = stage.scaleX();
     const pointer = stage.getPointerPosition();
+
+    if (!pointer) return;
 
     const mousePointTo = {
       x: (pointer.x - stage.x()) / oldScale,
@@ -93,8 +83,13 @@ export default function ConstructionPlanKonva({
     stage.position(newPos);
   };
 
-  const handleStageClick = (e) => {
-    const pos = e.target.getStage().getRelativePointerPosition();
+  const handleStageClick = (e: Konva.KonvaEventObject<MouseEvent>) => {
+    // don't add circles on drag
+    if (e.target.getStage()?.isDragging()) {
+      return;
+    }
+    const pos = e.target.getStage()?.getRelativePointerPosition();
+    if (!pos) return;
     console.log({
       x: pos.x,
       y: pos.y,
@@ -115,7 +110,7 @@ export default function ConstructionPlanKonva({
     ]);
   };
 
-  // Update on mount and when window resizes
+  // Update on mount, when window resizes, or when image loads
   useEffect(() => {
     updateSize();
     window.addEventListener("resize", updateSize);
@@ -123,7 +118,7 @@ export default function ConstructionPlanKonva({
     return () => {
       window.removeEventListener("resize", updateSize);
     };
-  }, []);
+  }, [image]);
 
   return (
     <div ref={containerRef} style={{ width: "100%", height: "100%" }}>
@@ -138,7 +133,7 @@ export default function ConstructionPlanKonva({
         onClick={handleStageClick}
       >
         <Layer>
-          <URLImage src={imageUrl} />
+          <Image image={image} />
         </Layer>
         <Layer>
           {circles.map((circle) => (

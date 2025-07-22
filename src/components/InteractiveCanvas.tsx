@@ -3,6 +3,12 @@ import { Stage, Layer, Image, Shape } from "react-konva";
 import Konva from "konva";
 import useImage from "use-image";
 import type { TaskDocType } from "@/types/schemas";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 interface ConstructionPlanKonvaProps {
   imageUrl: string;
@@ -34,6 +40,17 @@ export default function InteractiveCanvas({
     scale: 1,
     x: 0,
     y: 0,
+  });
+  const [contextMenu, setContextMenu] = useState<{
+    visible: boolean;
+    x: number;
+    y: number;
+    taskId: string | null;
+  }>({
+    visible: false,
+    x: 0,
+    y: 0,
+    taskId: null,
   });
 
   // Function to handle resize
@@ -105,6 +122,12 @@ export default function InteractiveCanvas({
   };
 
   const handleStageClick = (e: Konva.KonvaEventObject<MouseEvent>) => {
+    // If context menu is open, a click on the stage should just close it.
+    if (contextMenu.visible) {
+      setContextMenu({ ...contextMenu, visible: false });
+      return;
+    }
+
     // Only create a pin if the click is on the stage background or the main image.
     // This prevents creating a new pin when clicking on an existing pin or its layer.
     if (e.target.className !== "Stage" && e.target.className !== "Image") {
@@ -141,9 +164,27 @@ export default function InteractiveCanvas({
     e: Konva.KonvaEventObject<MouseEvent>,
     taskId: string
   ) => {
-    if (window.confirm("Are you sure you want to delete this pin?")) {
-      setTaskList((prevTasks) => prevTasks.filter((task) => task.id !== taskId));
-    }
+    e.evt.preventDefault();
+    const stage = stageRef.current;
+    if (!stage) return;
+
+    // Get pointer position relative to the stage container
+    const pos = stage.getPointerPosition();
+    if (!pos) return;
+
+    setContextMenu({
+      visible: true,
+      x: pos.x,
+      y: pos.y,
+      taskId,
+    });
+  };
+
+  const handleDeletePin = () => {
+    if (!contextMenu.taskId) return;
+    setTaskList((prevTasks) =>
+      prevTasks.filter((task) => task.id !== contextMenu.taskId)
+    );
   };
 
   const handleDragEnd = (e: Konva.KonvaEventObject<DragEvent>) => {
@@ -168,7 +209,8 @@ export default function InteractiveCanvas({
     <div
       id="canvas-container"
       ref={containerRef}
-      style={{ width: "100%", height: "100%" }}
+      style={{ width: "100%", height: "100%", position: "relative" }}
+      onContextMenu={(e) => e.preventDefault()}
     >
       <Stage
         ref={stageRef}
@@ -230,6 +272,29 @@ export default function InteractiveCanvas({
           ))}
         </Layer>
       </Stage>
+      <DropdownMenu
+        open={contextMenu.visible}
+        onOpenChange={(isOpen) => {
+          if (!isOpen) {
+            setContextMenu({ ...contextMenu, visible: false, taskId: null });
+          }
+        }}
+      >
+        <DropdownMenuTrigger
+          style={{
+            position: "absolute",
+            top: `${contextMenu.y}px`,
+            left: `${contextMenu.x}px`,
+            visibility: "hidden",
+          }}
+        />
+        <DropdownMenuContent>
+          <DropdownMenuItem>Edit</DropdownMenuItem>
+          <DropdownMenuItem className="text-red-500" onClick={handleDeletePin}>
+            Delete
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
     </div>
   );
 }

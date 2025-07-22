@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
-import { Stage, Layer, Image, Circle } from "react-konva";
+import { Stage, Layer, Image, Circle, Shape } from "react-konva";
 import Konva from "konva";
 import useImage from "use-image";
 
@@ -154,6 +154,44 @@ export default function ConstructionPlanKonva({
               fill={circle.fill}
             />
           ))}
+        </Layer>
+        <Layer>
+          <Shape
+            x={300}
+            y={300}
+            width={50}
+            height={75}
+            sceneFunc={function (context, shape) {
+              const width = shape.width();
+              const height = shape.height();
+              const radius = width / 2;
+
+              context.beginPath();
+              context.moveTo(0, radius); // Start at left side of circle
+              // Top arc
+              context.arc(radius, radius, radius, Math.PI, 0, false);
+              // Right curve to tip
+              context.quadraticCurveTo(width, height * 0.65, radius, height);
+              // Left curve from tip to start
+              context.quadraticCurveTo(0, height * 0.65, 0, radius);
+              context.closePath();
+
+              // (!) Konva specific method, it is very important
+              context.fillStrokeShape(shape);
+
+              // Add text inside the pin
+              const text = "AB";
+              context.font = "bold 18px Arial";
+              context.fillStyle = "white";
+              context.textAlign = "center";
+              context.textBaseline = "middle";
+              // Position text in the center of the circular part of the pin
+              context.fillText(text, radius, radius);
+            }}
+            fill="#E53E3E" // A classic red for a pin
+            stroke="black"
+            strokeWidth={2}
+          />
         </Layer>
       </Stage>
     </div>

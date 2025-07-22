@@ -191,6 +191,7 @@ export default function ConstructionPlanKonva({
             fill="#E53E3E" // A classic red for a pin
             stroke="black"
             strokeWidth={2}
+            draggable
           />
         </Layer>
       </Stage>

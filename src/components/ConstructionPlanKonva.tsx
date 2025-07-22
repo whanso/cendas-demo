@@ -36,8 +36,12 @@ export default function ConstructionPlanKonva({
   const updateSize = () => {
     if (!containerRef.current || !image) return;
 
-    const containerWidth = containerRef.current.offsetWidth;
-    const scale = containerWidth / image.width;
+    const { offsetWidth: containerWidth, offsetHeight: containerHeight } =
+      containerRef.current;
+
+    const scaleX = containerWidth / image.width;
+    const scaleY = containerHeight / image.height;
+    const scale = Math.min(scaleX, scaleY);
 
     setStageSize({
       width: image.width * scale,

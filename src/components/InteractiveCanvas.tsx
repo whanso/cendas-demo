@@ -134,6 +134,14 @@ export default function InteractiveCanvas({
 
     // Update React state
     setStageTransform({ scale: newScale, x: newPos.x, y: newPos.y });
+
+    // Manually update pin scales to avoid render lag.
+    // The React state update will still happen, but this ensures
+    // the visual update is synchronous with the gesture.
+    const pinsLayer = stage.findOne<Konva.Layer>("#pins-layer");
+    pinsLayer?.children?.forEach((pin) => {
+      pin.scale({ x: 1 / newScale, y: 1 / newScale });
+    });
   };
 
   const handleStageClick = (
@@ -244,6 +252,14 @@ export default function InteractiveCanvas({
       stage.position(newPos);
       setStageTransform({ scale: newScale, x: newPos.x, y: newPos.y });
 
+      // Manually update pin scales to avoid render lag on mobile.
+      // The React state update will still happen, but this ensures
+      // the visual update is synchronous with the gesture.
+      const pinsLayer = stage.findOne<Konva.Layer>("#pins-layer");
+      pinsLayer?.children?.forEach((pin) => {
+        pin.scale({ x: 1 / newScale, y: 1 / newScale });
+      });
+
       lastDist.current = dist;
       lastCenter.current = newCenter;
     }
@@ -340,7 +356,7 @@ export default function InteractiveCanvas({
         <Layer>
           <Image image={image} />
         </Layer>
-        <Layer>
+        <Layer id="pins-layer">
           {taskList.map((task) => (
             <Shape
               key={task.id}

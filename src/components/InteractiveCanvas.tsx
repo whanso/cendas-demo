@@ -313,10 +313,10 @@ export default function InteractiveCanvas({
         scaleX={stageScale.x}
         scaleY={stageScale.y}
         draggable
-        onWheel={handleWheel}
-        onClick={handleStageClick}
-        onTap={handleStageClick}
-        onDragEnd={handleDragEnd}
+        // onWheel={handleWheel}
+        // onClick={handleStageClick}
+        // onTap={handleStageClick}
+        // onDragEnd={handleDragEnd}
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
       >

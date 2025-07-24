@@ -244,7 +244,7 @@ export default function InteractiveCanvas({
         setLastCenter(newCenter);
       }
     },
-    [dragStopped, lastCenter, lastDist]
+    [dragStopped, lastCenter, lastDist, stagePos, stageScale]
   );
 
   const handleTouchEnd = () => {

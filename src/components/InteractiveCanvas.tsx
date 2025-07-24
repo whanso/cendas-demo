@@ -35,8 +35,8 @@ export default function InteractiveCanvas({
   );
   const [lastDist, setLastDist] = useState(0);
   const [dragStopped, setDragStopped] = useState(false);
-  // const [stagePos, setStagePos] = useState({ x: 0, y: 0 });
-
+  const [stagePos, setStagePos] = useState({ x: 0, y: 0 });
+  const [stageScale, setStageScale] = useState({ x: 1, y: 1 });
   // Reference to parent container
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -183,7 +183,6 @@ export default function InteractiveCanvas({
       const touch1 = e.evt.touches[0];
       const touch2 = e.evt.touches[1];
       const stage = e.target.getStage();
-
       if (!stage) return;
 
       // we need to restore dragging, if it was cancelled by multi-touch
@@ -222,24 +221,21 @@ export default function InteractiveCanvas({
           return;
         }
 
-        const pos = e.target.getStage()?.getRelativePointerPosition();
-        if (!pos) return;
-
         // local coordinates of center point
         const pointTo = {
-          x: (newCenter.x - pos.x) / stage.scaleX(),
-          y: (newCenter.y - pos.y) / stage.scaleX(),
+          x: (newCenter.x - stagePos.x) / stageScale.x,
+          y: (newCenter.y - stagePos.y) / stageScale.x,
         };
 
-        const scale = stage.scaleX() * (dist / lastDist);
+        const scale = stageScale.x * (dist / lastDist);
 
-        stage.scale({ x: scale, y: scale });
+        setStageScale({ x: scale, y: scale });
 
         // calculate new position of the stage
         const dx = newCenter.x - lastCenter.x;
         const dy = newCenter.y - lastCenter.y;
 
-        stage.position({
+        setStagePos({
           x: newCenter.x - pointTo.x * scale + dx,
           y: newCenter.y - pointTo.y * scale + dy,
         });
@@ -312,9 +308,14 @@ export default function InteractiveCanvas({
         ref={stageRef}
         width={stageSize.width}
         height={stageSize.height}
+        x={stagePos.x}
+        y={stagePos.y}
+        scaleX={stageScale.x}
+        scaleY={stageScale.y}
         draggable
         onWheel={handleWheel}
         onClick={handleStageClick}
+        onTap={handleStageClick}
         onDragEnd={handleDragEnd}
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}

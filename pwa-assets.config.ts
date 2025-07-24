@@ -5,5 +5,5 @@ import {
 
 export default defineConfig({
   preset,
-  images: ["public/logo.png", "public-dev/logo.png"],
+  images: ["public/logo.png"],
 });

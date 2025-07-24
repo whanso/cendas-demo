@@ -1,5 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Stage, Layer, Image, Shape } from "react-konva";
+import {
+  Stage,
+  Layer,
+  Image,
+  Shape,
+  RegularPolygon,
+  Circle,
+} from "react-konva";
 import Konva from "konva";
 import useImage from "use-image";
 import type { TaskDocType } from "@/types/schemas";
@@ -327,7 +334,24 @@ export default function InteractiveCanvas({
         onTouchEnd={handleTouchEnd}
       >
         <Layer>
-          <Image image={image} />
+          <RegularPolygon
+            x={190}
+            y={window.innerHeight / 2}
+            sides={3}
+            radius={80}
+            fill="green"
+            stroke="black"
+            strokeWidth={4}
+          />
+          <Circle
+            x={380}
+            y={window.innerHeight / 2}
+            radius={70}
+            fill="red"
+            stroke="black"
+            strokeWidth={4}
+          />
+          {/* <Image image={image} /> */}
         </Layer>
         {/* <Layer>
           {taskList.map((task) => (

@@ -10,6 +10,12 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
+// by default Konva prevent some events when node is dragging
+// it improve the performance and work well for 95% of cases
+// we need to enable all events on Konva, even when we are dragging a node
+// so it triggers touchmove correctly.
+(window as any).Konva.hitOnDragEnabled = true;
+
 interface ConstructionPlanKonvaProps {
   imageUrl: string;
   tasks?: Array<TaskDocType>;

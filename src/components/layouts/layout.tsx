@@ -8,7 +8,26 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Outlet } from "react-router";
+import { Link, Outlet, useLocation } from "react-router";
+import {
+  NavigationMenu,
+  NavigationMenuItem,
+  NavigationMenuLink,
+  navigationMenuTriggerStyle,
+  NavigationMenuList,
+} from "../ui/navigation-menu";
+import CendasLogo from "../icons/CendasLogo";
+
+const links: { title: string; href: string }[] = [
+  {
+    title: "Tasks",
+    href: "/tasks",
+  },
+  {
+    title: "Floor Plan",
+    href: "/floor-plan",
+  },
+];
 
 const getInitials = (name = "") => {
   const names = name.split(" ");
@@ -20,6 +39,7 @@ const getInitials = (name = "") => {
 
 export default function Layout() {
   const { user, logout } = useAuth();
+  const location = useLocation();
 
   if (!user) {
     return <Outlet />;
@@ -27,22 +47,45 @@ export default function Layout() {
 
   return (
     <div className="flex flex-col h-screen">
-      <header className="flex justify-between items-center p-4 border-b">
-        <div /> {/* This empty div pushes the avatar to the right */}
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Avatar className="cursor-pointer">
-              <AvatarFallback style={{ backgroundColor: user.userColor }} className="text-white">
-                {getInitials(user.username)}
-              </AvatarFallback>
-            </Avatar>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuLabel>{user.username}</DropdownMenuLabel>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={() => logout()}>Logout</DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+      <header className="grid grid-cols-3 p-4 gap-8 border-b">
+        <CendasLogo />
+        <NavigationMenu className="max-w-full">
+          <NavigationMenuList>
+            {links.map((link) => (
+              <NavigationMenuItem
+                key={link.title}
+                className={
+                  location.pathname === link.href ? "bg-accent rounded-sm" : ""
+                }
+              >
+                <NavigationMenuLink asChild>
+                  <Link to={link.href}>{link.title}</Link>
+                </NavigationMenuLink>
+              </NavigationMenuItem>
+            ))}
+          </NavigationMenuList>
+        </NavigationMenu>
+        <div className="flex items-center">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Avatar className="cursor-pointer ml-auto">
+                <AvatarFallback
+                  style={{ backgroundColor: user.userColor }}
+                  className="text-white"
+                >
+                  {getInitials(user.username)}
+                </AvatarFallback>
+              </Avatar>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuLabel>{user.username}</DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={() => logout()}>
+                Logout
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
       </header>
       <main className="flex-grow flex flex-col">
         <Outlet />

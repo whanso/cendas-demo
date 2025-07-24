@@ -329,7 +329,7 @@ export default function InteractiveCanvas({
         <Layer>
           <Image image={image} />
         </Layer>
-        <Layer>
+        {/* <Layer>
           {taskList.map((task) => (
             <Shape
               key={task.id}
@@ -376,7 +376,7 @@ export default function InteractiveCanvas({
               draggable
             />
           ))}
-        </Layer>
+        </Layer> */}
       </Stage>
       <DropdownMenu
         open={contextMenu.visible}

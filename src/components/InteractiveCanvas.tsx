@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Stage, Layer, Image, Shape } from "react-konva";
 import Konva from "konva";
 import useImage from "use-image";
@@ -30,6 +30,12 @@ export default function InteractiveCanvas({
       id: "1753208688013",
     },
   ]);
+  const [lastCenter, setLastCenter] = useState<{ x: number; y: number } | null>(
+    null
+  );
+  const [lastDist, setLastDist] = useState(0);
+  const [dragStopped, setDragStopped] = useState(false);
+  // const [stagePos, setStagePos] = useState({ x: 0, y: 0 });
 
   // Reference to parent container
   const containerRef = useRef<HTMLDivElement>(null);
@@ -55,6 +61,7 @@ export default function InteractiveCanvas({
 
   // Function to handle resize
   const updateSize = () => {
+    console.log("updatesize");
     if (!containerRef.current || !image || !stageRef.current) return;
 
     const { offsetWidth: containerWidth, offsetHeight: containerHeight } =
@@ -140,13 +147,6 @@ export default function InteractiveCanvas({
     }
     const pos = e.target.getStage()?.getRelativePointerPosition();
     if (!pos) return;
-    console.log({
-      x: pos.x,
-      y: pos.y,
-      radius: 20,
-      fill: "red",
-      id: Date.now().toString(),
-    });
     // Add new circle
     setTaskList([
       ...taskList,
@@ -160,8 +160,104 @@ export default function InteractiveCanvas({
     ]);
   };
 
+  const getDistance = (
+    p1: { x: number; y: number },
+    p2: { x: number; y: number }
+  ) => {
+    return Math.sqrt(Math.pow(p2.x - p1.x, 2) + Math.pow(p2.y - p1.y, 2));
+  };
+
+  const getCenter = (
+    p1: { x: number; y: number },
+    p2: { x: number; y: number }
+  ) => {
+    return {
+      x: (p1.x + p2.x) / 2,
+      y: (p1.y + p2.y) / 2,
+    };
+  };
+
+  const handleTouchMove = useCallback(
+    (e: Konva.KonvaEventObject<TouchEvent>) => {
+      e.evt.preventDefault();
+      const touch1 = e.evt.touches[0];
+      const touch2 = e.evt.touches[1];
+      const stage = e.target.getStage();
+
+      if (!stage) return;
+
+      // we need to restore dragging, if it was cancelled by multi-touch
+      if (touch1 && !touch2 && !stage.isDragging() && dragStopped) {
+        stage.startDrag();
+        setDragStopped(false);
+      }
+
+      if (touch1 && touch2) {
+        // if the stage was under Konva's drag&drop
+        // we need to stop it, and implement our own pan logic with two pointers
+        if (stage.isDragging()) {
+          stage.stopDrag();
+          setDragStopped(true);
+        }
+
+        const p1 = {
+          x: touch1.clientX,
+          y: touch1.clientY,
+        };
+        const p2 = {
+          x: touch2.clientX,
+          y: touch2.clientY,
+        };
+
+        if (!lastCenter) {
+          setLastCenter(getCenter(p1, p2));
+          return;
+        }
+        const newCenter = getCenter(p1, p2);
+
+        const dist = getDistance(p1, p2);
+
+        if (!lastDist) {
+          setLastDist(dist);
+          return;
+        }
+
+        const pos = e.target.getStage()?.getRelativePointerPosition();
+        if (!pos) return;
+
+        // local coordinates of center point
+        const pointTo = {
+          x: (newCenter.x - pos.x) / stage.scaleX(),
+          y: (newCenter.y - pos.y) / stage.scaleX(),
+        };
+
+        const scale = stage.scaleX() * (dist / lastDist);
+
+        stage.scale({ x: scale, y: scale });
+
+        // calculate new position of the stage
+        const dx = newCenter.x - lastCenter.x;
+        const dy = newCenter.y - lastCenter.y;
+
+        stage.position({
+          x: newCenter.x - pointTo.x * scale + dx,
+          y: newCenter.y - pointTo.y * scale + dy,
+        });
+
+        setLastDist(dist);
+        setLastCenter(newCenter);
+      }
+    },
+    [dragStopped, lastCenter, lastDist]
+  );
+
+  const handleTouchEnd = () => {
+    setLastDist(0);
+    setLastCenter(null);
+  };
+
   const handlePinClick = (
-    e: Konva.KonvaEventObject<MouseEvent>,
+    e: Konva.KonvaEventObject<MouseEvent | Event>,
     taskId: string
   ) => {
     e.evt.preventDefault();
@@ -220,6 +316,8 @@ export default function InteractiveCanvas({
         onWheel={handleWheel}
         onClick={handleStageClick}
         onDragEnd={handleDragEnd}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
       >
         <Layer>
           <Image image={image} />
@@ -237,6 +335,7 @@ export default function InteractiveCanvas({
               scaleX={1 / stageTransform.scale}
               scaleY={1 / stageTransform.scale}
               onClick={(e) => handlePinClick(e, task.id)}
+              onTap={(e) => handlePinClick(e, task.id)}
               sceneFunc={function (context, shape) {
                 const width = shape.width();
                 const height = shape.height();

@@ -319,8 +319,8 @@ export default function InteractiveCanvas({
     >
       <Stage
         ref={stageRef}
-        width={stageSize.width}
-        height={stageSize.height}
+        width={window.innerHeight}
+        height={window.innerWidth}
         x={stagePos.x}
         y={stagePos.y}
         scaleX={stageScale.x}

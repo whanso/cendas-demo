@@ -311,49 +311,49 @@ export default function InteractiveCanvas({
   }, [image]);
 
   return (
-    <div
-      id="canvas-container"
-      ref={containerRef}
-      style={{ width: "100%", height: "100%", position: "relative" }}
-      onContextMenu={(e) => e.preventDefault()}
+    // <div
+    //   id="canvas-container"
+    //   ref={containerRef}
+    //   style={{ width: "100%", height: "100%", position: "relative" }}
+    //   onContextMenu={(e) => e.preventDefault()}
+    // >
+    <Stage
+      ref={stageRef}
+      width={window.innerWidth}
+      height={window.innerHeight}
+      x={stagePos.x}
+      y={stagePos.y}
+      scaleX={stageScale.x}
+      scaleY={stageScale.y}
+      draggable
+      // onWheel={handleWheel}
+      // onClick={handleStageClick}
+      // onTap={handleStageClick}
+      // onDragEnd={handleDragEnd}
+      onTouchMove={handleTouchMove}
+      onTouchEnd={handleTouchEnd}
     >
-      <Stage
-        ref={stageRef}
-        width={window.innerHeight}
-        height={window.innerWidth}
-        x={stagePos.x}
-        y={stagePos.y}
-        scaleX={stageScale.x}
-        scaleY={stageScale.y}
-        draggable
-        // onWheel={handleWheel}
-        // onClick={handleStageClick}
-        // onTap={handleStageClick}
-        // onDragEnd={handleDragEnd}
-        onTouchMove={handleTouchMove}
-        onTouchEnd={handleTouchEnd}
-      >
-        <Layer>
-          <RegularPolygon
-            x={190}
-            y={window.innerHeight / 2}
-            sides={3}
-            radius={80}
-            fill="green"
-            stroke="black"
-            strokeWidth={4}
-          />
-          <Circle
-            x={380}
-            y={window.innerHeight / 2}
-            radius={70}
-            fill="red"
-            stroke="black"
-            strokeWidth={4}
-          />
-          {/* <Image image={image} /> */}
-        </Layer>
-        {/* <Layer>
+      <Layer>
+        <RegularPolygon
+          x={190}
+          y={window.innerHeight / 2}
+          sides={3}
+          radius={80}
+          fill="green"
+          stroke="black"
+          strokeWidth={4}
+        />
+        <Circle
+          x={380}
+          y={window.innerHeight / 2}
+          radius={70}
+          fill="red"
+          stroke="black"
+          strokeWidth={4}
+        />
+        {/* <Image image={image} /> */}
+      </Layer>
+      {/* <Layer>
           {taskList.map((task) => (
             <Shape
               key={task.id}
@@ -401,30 +401,30 @@ export default function InteractiveCanvas({
             />
           ))}
         </Layer> */}
-      </Stage>
-      <DropdownMenu
-        open={contextMenu.visible}
-        onOpenChange={(isOpen) => {
-          if (!isOpen) {
-            setContextMenu({ ...contextMenu, visible: false, taskId: null });
-          }
-        }}
-      >
-        <DropdownMenuTrigger
-          style={{
-            position: "absolute",
-            top: `${contextMenu.y}px`,
-            left: `${contextMenu.x}px`,
-            visibility: "hidden",
-          }}
-        />
-        <DropdownMenuContent>
-          <DropdownMenuItem>Edit</DropdownMenuItem>
-          <DropdownMenuItem className="text-red-500" onClick={handleDeletePin}>
-            Delete
-          </DropdownMenuItem>
-        </DropdownMenuContent>
-      </DropdownMenu>
-    </div>
+    </Stage>
+    //   <DropdownMenu
+    //     open={contextMenu.visible}
+    //     onOpenChange={(isOpen) => {
+    //       if (!isOpen) {
+    //         setContextMenu({ ...contextMenu, visible: false, taskId: null });
+    //       }
+    //     }}
+    //   >
+    //     <DropdownMenuTrigger
+    //       style={{
+    //         position: "absolute",
+    //         top: `${contextMenu.y}px`,
+    //         left: `${contextMenu.x}px`,
+    //         visibility: "hidden",
+    //       }}
+    //     />
+    //     <DropdownMenuContent>
+    //       <DropdownMenuItem>Edit</DropdownMenuItem>
+    //       <DropdownMenuItem className="text-red-500" onClick={handleDeletePin}>
+    //         Delete
+    //       </DropdownMenuItem>
+    //     </DropdownMenuContent>
+    //   </DropdownMenu>
+    // </div>
   );
 }

@@ -13,7 +13,6 @@ import {
   NavigationMenu,
   NavigationMenuItem,
   NavigationMenuLink,
-  navigationMenuTriggerStyle,
   NavigationMenuList,
 } from "../ui/navigation-menu";
 import CendasLogo from "../icons/CendasLogo";

@@ -12,12 +12,12 @@ export default defineConfig({
     VitePWA({
       registerType: "autoUpdate",
       workbox: {
-        globPatterns: ["**/*.{js,css,html,ico,png,svg,png}"],
+        globPatterns: ["**/*.{js,css,html,ico,png,svg}"],
       },
       manifest: {
-        name: "YOUR APP NAME",
-        short_name: "YOUR NAME",
-        description: "SHORT DESC",
+        name: "CendasDemo",
+        short_name: "CendasDemo",
+        description: "A Demo for Cendas",
         theme_color: "#ffffff",
         background_color: "#ffffff",
         display: "standalone",
@@ -37,7 +37,7 @@ export default defineConfig({
             src: "pwa-512x512.png",
             sizes: "512x512",
             type: "image/png",
-          purpose: "any",
+            purpose: "any",
           },
           {
             src: "maskable-icon-512x512.png",

@@ -7,6 +7,18 @@ import {
   type RxDatabase,
 } from "rxdb";
 
+export const CHECKLIST_STATUS = {
+  NOT_STARTED: "Not Started",
+  IN_PROGRESS: "In Progress",
+  BLOCKED: "Blocked",
+  FINAL_CHECK_AWAITING: "Final Check Awaiting",
+  DONE: "Done",
+} as const;
+
+type ObjectValues<T> = T[keyof T];
+export type ChecklistStatusKeys = keyof typeof CHECKLIST_STATUS;
+export type ChecklistStatus = ObjectValues<typeof CHECKLIST_STATUS>;
+
 export const userSchemaLiteral = {
   title: "user schema",
   description: "describes a user",
@@ -52,17 +64,12 @@ export const taskSchemaLiteral = {
           item: {
             type: "string",
           },
-          checked: {
+          status: {
             type: "string",
-            enum: [
-              "Not started",
-              "In progress",
-              "Blocked",
-              "Final Check Awaiting",
-              "Done",
-            ],
+            enum: Object.keys(CHECKLIST_STATUS),
           },
         },
+        required: ["item", "status"],
       },
     },
     timestamp: {

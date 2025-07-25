@@ -1,15 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import {
-  Stage,
-  Layer,
-  Image,
-  Shape,
-  RegularPolygon,
-  Circle,
-} from "react-konva";
+import { Stage, Layer, Image, Shape } from "react-konva";
 import Konva from "konva";
 import useImage from "use-image";
 import type { TaskDocType } from "@/types/schemas";
+import { DeleteConfirmationModal } from "./DeleteConfirmationModal";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -67,6 +61,8 @@ export default function InteractiveCanvas({
     y: 0,
     taskId: null,
   });
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [pinToDelete, setPinToDelete] = useState<string | null>(null);
 
   // Function to handle resize
   const updateSize = useCallback(() => {
@@ -292,9 +288,16 @@ export default function InteractiveCanvas({
 
   const handleDeletePin = () => {
     if (!contextMenu.taskId) return;
+    setPinToDelete(contextMenu.taskId);
+    setIsDeleteModalOpen(true);
+  };
+
+  const handleConfirmDelete = () => {
+    if (!pinToDelete) return;
     setTaskList((prevTasks) =>
-      prevTasks.filter((task) => task.id !== contextMenu.taskId)
+      prevTasks.filter((task) => task.id !== pinToDelete)
     );
+    setIsDeleteModalOpen(false);
   };
 
   const handleDragEnd = (e: Konva.KonvaEventObject<DragEvent>) => {
@@ -429,6 +432,13 @@ export default function InteractiveCanvas({
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
+      <DeleteConfirmationModal
+        isOpen={isDeleteModalOpen}
+        onClose={() => setIsDeleteModalOpen(false)}
+        onConfirm={handleConfirmDelete}
+        title="Are you sure you want to delete this pin?"
+        description="This action cannot be undone. This will permanently delete the pin from the floor plan."
+      />
     </div>
   );
 }

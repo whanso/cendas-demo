@@ -4,7 +4,6 @@ import { Trash2 } from "lucide-react";
 import { useAuth } from "@/auth";
 import { useDatabase } from "@/components/DatabaseProvider";
 import type { TaskDocType, ChecklistStatusKeys } from "@/types/schemas";
-import { CHECKLIST_STATUS } from "@/types/schemas";
 import { Button } from "@/components/ui/button";
 import { TaskStatus, getTaskStatus } from "@/components/TaskStatus";
 import {
@@ -16,6 +15,9 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { TaskModal } from "./TaskModal";
+import { TaskFilter } from "./TaskFilter";
+import { EmptyState } from "./EmptyState";
+import { DeleteConfirmationModal } from "./DeleteConfirmationModal";
 
 export default function TaskList() {
   const db = useDatabase();
@@ -25,8 +27,12 @@ export default function TaskList() {
   const [modalMode, setModalMode] = useState<"create" | "edit">("create");
   const [selectedTask, setSelectedTask] =
     useState<RxDocument<TaskDocType> | null>(null);
-  const [statusFilter, setStatusFilter] =
-    useState<ChecklistStatusKeys | "ALL">("ALL");
+  const [statusFilter, setStatusFilter] = useState<ChecklistStatusKeys | "ALL">(
+    "ALL"
+  );
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [taskToDelete, setTaskToDelete] =
+    useState<RxDocument<TaskDocType> | null>(null);
 
   useEffect(() => {
     if (!db?.tasks || !user?.userId) return;
@@ -61,8 +67,17 @@ export default function TaskList() {
     setSelectedTask(null);
   };
 
-  const handleDeleteTask = async (task: RxDocument<TaskDocType>) => {
-    await task.remove();
+  const handleDeleteTask = (task: RxDocument<TaskDocType>) => {
+    setTaskToDelete(task);
+    setIsDeleteModalOpen(true);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (taskToDelete) {
+      await taskToDelete.remove();
+      setIsDeleteModalOpen(false);
+      setTaskToDelete(null);
+    }
   };
 
   const filteredTasks = tasks.filter((task) => {
@@ -78,30 +93,10 @@ export default function TaskList() {
         <h1 className="text-2xl font-bold">My Tasks</h1>
         <Button onClick={() => handleOpenModal("create")}>Add Task</Button>
       </div>
-      <div className="flex items-center gap-2 mb-4 flex-wrap">
-        <span className="text-sm font-medium text-muted-foreground mr-2">
-          Filter by:
-        </span>
-        <Button
-          variant={statusFilter === "ALL" ? "secondary" : "ghost"}
-          size="sm"
-          onClick={() => setStatusFilter("ALL")}
-          className="rounded-full"
-        >
-          All
-        </Button>
-        {Object.keys(CHECKLIST_STATUS).map((status) => (
-          <Button
-            key={status}
-            variant={statusFilter === status ? "secondary" : "ghost"}
-            size="sm"
-            onClick={() => setStatusFilter(status as ChecklistStatusKeys)}
-            className="rounded-full"
-          >
-            {CHECKLIST_STATUS[status as ChecklistStatusKeys]}
-          </Button>
-        ))}
-      </div>
+      <TaskFilter
+        statusFilter={statusFilter}
+        onStatusFilterChange={setStatusFilter}
+      />
       <Table>
         <TableHeader>
           <TableRow>
@@ -112,41 +107,68 @@ export default function TaskList() {
           </TableRow>
         </TableHeader>
         <TableBody>
-          {filteredTasks.map((task) => {
-            const completedItems = task.checklist.filter(
-              (item) => item.status === "DONE"
-            ).length;
-            const totalItems = task.checklist.length;
-            return (
-              <TableRow
-                key={task.taskId}
-                onClick={() => handleOpenModal("edit", task)}
-                className="cursor-pointer"
-              >
-                <TableCell>
-                  <TaskStatus task={task} />
-                </TableCell>
-                <TableCell className="font-medium">{task.title}</TableCell>
-                <TableCell>
-                  <span className="text-muted-foreground">
-                    {completedItems} / {totalItems}
-                  </span>
-                </TableCell>
-                <TableCell className="text-right">
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleDeleteTask(task);
-                    }}
-                  >
-                    <Trash2 className="h-4 w-4 text-red-500" />
-                  </Button>
-                </TableCell>
-              </TableRow>
-            );
-          })}
+          {filteredTasks.length > 0 ? (
+            filteredTasks.map((task) => {
+              const completedItems = task.checklist.filter(
+                (item) => item.status === "DONE"
+              ).length;
+              const totalItems = task.checklist.length;
+              return (
+                <TableRow
+                  key={task.taskId}
+                  onClick={() => handleOpenModal("edit", task)}
+                  className="cursor-pointer"
+                >
+                  <TableCell>
+                    <TaskStatus task={task} />
+                  </TableCell>
+                  <TableCell className="font-medium">{task.title}</TableCell>
+                  <TableCell>
+                    <span className="text-muted-foreground">
+                      {completedItems} / {totalItems}
+                    </span>
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="rounded-full h-8 w-8"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDeleteTask(task);
+                      }}
+                    >
+                      <Trash2 className="h-4 w-4 " />
+                    </Button>
+                  </TableCell>
+                </TableRow>
+              );
+            })
+          ) : (
+            <TableRow>
+              <TableCell colSpan={4}>
+                <EmptyState
+                  title={
+                    tasks.length === 0
+                      ? "You have no tasks yet"
+                      : "No tasks found"
+                  }
+                  description={
+                    tasks.length === 0
+                      ? "Create a new task to get started."
+                      : "Try adjusting your filters to find what you're looking for."
+                  }
+                >
+                  {tasks.length === 0 && (
+                    <Button onClick={() => handleOpenModal("create")}>
+                      Create Task
+                    </Button>
+                  )}
+                </EmptyState>
+              </TableCell>
+            </TableRow>
+          )}
         </TableBody>
       </Table>
       <TaskModal
@@ -154,6 +176,13 @@ export default function TaskList() {
         onClose={handleCloseModal}
         mode={modalMode}
         task={selectedTask}
+      />
+      <DeleteConfirmationModal
+        isOpen={isDeleteModalOpen}
+        onClose={() => setIsDeleteModalOpen(false)}
+        onConfirm={handleConfirmDelete}
+        title="Are you sure you want to delete this task?"
+        description="This action cannot be undone. This will permanently delete the task and all of its data."
       />
     </div>
   );

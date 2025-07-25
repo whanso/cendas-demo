@@ -46,8 +46,13 @@ export default function Layout() {
 
   return (
     <div className="flex flex-col h-screen">
-      <header className="grid grid-cols-3 p-4 gap-8 border-b">
-        <CendasLogo />
+      <header className="grid grid-cols-[1fr_2fr_1fr] sm:grid-cols-3 p-4 gap-8 border-b">
+        <CendasLogo className="hidden md:block" />
+        <img
+          src="/logo.png"
+          alt="Cendas Logo"
+          className="block md:hidden h-[3.25rem]"
+        />
         <NavigationMenu className="max-w-full">
           <NavigationMenuList>
             {links.map((link) => (

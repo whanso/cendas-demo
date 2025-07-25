@@ -3,9 +3,10 @@ import type { RxDocument } from "rxdb";
 import { Trash2 } from "lucide-react";
 import { useAuth } from "@/auth";
 import { useDatabase } from "@/components/DatabaseProvider";
-import type { TaskDocType } from "@/types/schemas";
+import type { TaskDocType, ChecklistStatusKeys } from "@/types/schemas";
+import { CHECKLIST_STATUS } from "@/types/schemas";
 import { Button } from "@/components/ui/button";
-import { TaskStatus } from "@/components/TaskStatus";
+import { TaskStatus, getTaskStatus } from "@/components/TaskStatus";
 import {
   Table,
   TableBody,
@@ -24,6 +25,8 @@ export default function TaskList() {
   const [modalMode, setModalMode] = useState<"create" | "edit">("create");
   const [selectedTask, setSelectedTask] =
     useState<RxDocument<TaskDocType> | null>(null);
+  const [statusFilter, setStatusFilter] =
+    useState<ChecklistStatusKeys | "ALL">("ALL");
 
   useEffect(() => {
     if (!db?.tasks || !user?.userId) return;
@@ -62,11 +65,42 @@ export default function TaskList() {
     await task.remove();
   };
 
+  const filteredTasks = tasks.filter((task) => {
+    if (statusFilter === "ALL") {
+      return true;
+    }
+    return getTaskStatus(task) === statusFilter;
+  });
+
   return (
     <div className="p-4 max-w-6xl mx-auto">
       <div className="flex justify-between items-center mb-4">
         <h1 className="text-2xl font-bold">My Tasks</h1>
         <Button onClick={() => handleOpenModal("create")}>Add Task</Button>
+      </div>
+      <div className="flex items-center gap-2 mb-4 flex-wrap">
+        <span className="text-sm font-medium text-muted-foreground mr-2">
+          Filter by:
+        </span>
+        <Button
+          variant={statusFilter === "ALL" ? "secondary" : "ghost"}
+          size="sm"
+          onClick={() => setStatusFilter("ALL")}
+          className="rounded-full"
+        >
+          All
+        </Button>
+        {Object.keys(CHECKLIST_STATUS).map((status) => (
+          <Button
+            key={status}
+            variant={statusFilter === status ? "secondary" : "ghost"}
+            size="sm"
+            onClick={() => setStatusFilter(status as ChecklistStatusKeys)}
+            className="rounded-full"
+          >
+            {CHECKLIST_STATUS[status as ChecklistStatusKeys]}
+          </Button>
+        ))}
       </div>
       <Table>
         <TableHeader>
@@ -78,7 +112,7 @@ export default function TaskList() {
           </TableRow>
         </TableHeader>
         <TableBody>
-          {tasks.map((task) => {
+          {filteredTasks.map((task) => {
             const completedItems = task.checklist.filter(
               (item) => item.status === "DONE"
             ).length;

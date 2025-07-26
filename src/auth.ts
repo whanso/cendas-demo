@@ -3,6 +3,8 @@ import { getDatabase } from "./database";
 import { type UserDocType } from "./types/schemas";
 import type { RxState } from "rxdb";
 
+export type AuthUser = UserDocType;
+
 /**
  * Creates or gets the auth state singleton.
  * The state is persisted inside of the RxDB database.

@@ -1,22 +1,21 @@
 import { create } from "zustand";
 import type { RxDatabase, RxDocument } from "rxdb";
-import type { CendasDatabase, TaskDocType } from "@/types/schemas";
+import type { CendasDatabase, TaskDocType, UserDocType } from "@/types/schemas";
 import type { TaskFormValues } from "@/types/forms";
 import { Subscription } from "rxjs";
-import { AuthUser } from "@/auth";
 
 interface TaskState {
   tasks: RxDocument<TaskDocType>[];
   isLoading: boolean;
   isInitialized: boolean;
-  user: AuthUser | null;
+  user: UserDocType | null;
   // We'll hold references to the db and subscription to manage lifecycle
   _subscription: Subscription | null;
   _db: RxDatabase<CendasDatabase> | null;
 }
 
 interface TaskActions {
-  initialize: (db: RxDatabase<CendasDatabase>, user: AuthUser) => void;
+  initialize: (db: RxDatabase<CendasDatabase>, user: UserDocType) => void;
   cleanup: () => void;
   addTask: (
     taskData: TaskFormValues,
@@ -71,7 +70,8 @@ const useTaskStore = create<TaskState & TaskActions>((set, get) => ({
 
   addTask: async (data, position) => {
     const { _db, user } = get();
-    if (!_db || !user) throw new Error("Store not initialized or user not found");
+    if (!_db || !user)
+      throw new Error("Store not initialized or user not found");
 
     const newTask: TaskDocType = {
       taskId: crypto.randomUUID(),

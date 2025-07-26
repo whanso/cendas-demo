@@ -6,7 +6,7 @@ import useTaskStore from "@/stores/taskStore";
 import useUserStore from "@/stores/userStore";
 import { DeleteConfirmationModal } from "./DeleteConfirmationModal";
 import { TaskModal } from "./TaskModal";
-import { TaskFormValues } from "@/types/forms";
+import type { TaskFormValues } from "@/types/forms";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -414,8 +414,12 @@ export default function InteractiveCanvas({
                 offsetY={45}
                 scaleX={1 / stageTransform.scale}
                 scaleY={1 / stageTransform.scale}
-                onClick={(e) => handlePinClick(e, task.taskId)}
-                onTap={(e) => handlePinClick(e, task.taskId)}
+                onClick={(e: Konva.KonvaEventObject<MouseEvent>) =>
+                  handlePinClick(e, task.taskId)
+                }
+                onTap={(e: Konva.KonvaEventObject<TouchEvent>) =>
+                  handlePinClick(e, task.taskId)
+                }
                 onDragStart={handlePinDragStart}
                 onDragEnd={handlePinDragEnd}
                 sceneFunc={function (context, shape) {

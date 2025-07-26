@@ -43,7 +43,7 @@ export default function InteractiveCanvas({
   const updatePinPosition = useTaskStore((state) => state.updatePinPosition);
   const deleteTask = useTaskStore((state) => state.deleteTask);
   const updateTask = useTaskStore((state) => state.updateTask);
-  const usersMap = useUserStore((state) => state.usersMap);
+  const currentUser = useUserStore((state) => state.currentUser);
   const stageRef = useRef<Konva.Stage>(null);
   const [image] = useImage(imageUrl, "anonymous");
   // Reference to parent container
@@ -85,9 +85,9 @@ export default function InteractiveCanvas({
   const tasksWithPins = useMemo(
     () =>
       tasks.filter(
-        (task) => task.position?.x != null && task.position?.y != null
+        (task) => task.userId === currentUser?.userId && task.position
       ),
-    [tasks]
+    [tasks, currentUser]
   );
 
   // Function to handle resize
@@ -190,6 +190,11 @@ export default function InteractiveCanvas({
       setNewPinCoords(pos);
       setIsCreateModalOpen(true);
     }
+  };
+
+  const handleCloseCreateModal = () => {
+    setIsCreateModalOpen(false);
+    setNewPinCoords(null);
   };
 
   const handleCreateTask = async (data: TaskFormValues) => {
@@ -401,7 +406,6 @@ export default function InteractiveCanvas({
         </Layer>
         <Layer id="pins-layer">
           {tasksWithPins.map((task) => {
-            const taskUser = usersMap.get(task.userId);
             return (
               <Shape
                 key={task.taskId}
@@ -446,7 +450,7 @@ export default function InteractiveCanvas({
                   context.fillStrokeShape(shape);
 
                   // Add text inside the pin
-                  const text = getInitials(taskUser?.username);
+                  const text = getInitials(currentUser?.username);
                   context.font = "bold 13px Arial";
                   context.fillStyle = "white";
                   context.textAlign = "center";
@@ -454,13 +458,57 @@ export default function InteractiveCanvas({
                   // Position text in the center of the circular part of the pin
                   context.fillText(text, radius, radius);
                 }}
-                fill={taskUser?.userColor || "#E53E3E"}
+                fill={currentUser?.userColor || "#E53E3E"}
                 stroke="black"
                 strokeWidth={2}
                 draggable
               />
             );
           })}
+          {/* Temporary pin for creation */}
+          {newPinCoords && (
+            <Shape
+              x={newPinCoords.x}
+              y={newPinCoords.y}
+              width={30}
+              height={45}
+              offsetX={30 / 2}
+              offsetY={45}
+              scaleX={1 / stageTransform.scale}
+              scaleY={1 / stageTransform.scale}
+              sceneFunc={function (context, shape) {
+                const width = shape.width();
+                const height = shape.height();
+                const radius = width / 2;
+
+                context.beginPath();
+                context.moveTo(0, radius); // Start at left side of circle
+                // Top arc
+                context.arc(radius, radius, radius, Math.PI, 0, false);
+                // Right curve to tip
+                context.quadraticCurveTo(width, height * 0.65, radius, height);
+                // Left curve from tip to start
+                context.quadraticCurveTo(0, height * 0.65, 0, radius);
+                context.closePath();
+                // (!) Konva specific method, it is very important
+                context.fillStrokeShape(shape);
+
+                // Add text inside the pin
+                const text = getInitials(currentUser?.username);
+                context.font = "bold 13px Arial";
+                context.fillStyle = "white";
+                context.textAlign = "center";
+                context.textBaseline = "middle";
+                // Position text in the center of the circular part of the pin
+                context.fillText(text, radius, radius);
+              }}
+              fill={currentUser?.userColor || "#A0AEC0"}
+              stroke="black"
+              strokeWidth={2}
+              opacity={0.8}
+              listening={false} // This pin should not be interactive
+            />
+          )}
         </Layer>
       </Stage>
       <DropdownMenu
@@ -495,7 +543,7 @@ export default function InteractiveCanvas({
       />
       <TaskModal
         isOpen={isCreateModalOpen}
-        onClose={() => setIsCreateModalOpen(false)}
+        onClose={handleCloseCreateModal}
         mode="create"
         onSubmit={handleCreateTask}
       />

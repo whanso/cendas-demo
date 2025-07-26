@@ -44,7 +44,6 @@ export const useAuth = () => {
     (async () => {
       const authState = await getAuthState();
       sub = authState.user$.subscribe((currentUser) => {
-        console.log("new value to authstate");
         setUser(currentUser);
         setIsLoading(false);
       });

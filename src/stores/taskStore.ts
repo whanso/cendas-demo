@@ -6,6 +6,7 @@ import { Subscription } from "rxjs";
 
 interface TaskState {
   tasks: RxDocument<TaskDocType>[];
+  taskCount: number;
   isLoading: boolean;
   isInitialized: boolean;
   user: UserDocType | null;
@@ -31,6 +32,7 @@ interface TaskActions {
 
 const useTaskStore = create<TaskState & TaskActions>((set, get) => ({
   tasks: [],
+  taskCount: 0,
   isLoading: true,
   isInitialized: false,
   user: null,
@@ -50,7 +52,7 @@ const useTaskStore = create<TaskState & TaskActions>((set, get) => ({
       })
       .$.subscribe((tasks) => {
         if (tasks) {
-          set({ tasks, isLoading: false });
+          set({ tasks, taskCount: tasks.length, isLoading: false });
         }
       });
 
@@ -64,6 +66,7 @@ const useTaskStore = create<TaskState & TaskActions>((set, get) => ({
       _subscription: null,
       _db: null,
       tasks: [],
+      taskCount: 0,
       user: null,
     });
   },

@@ -1,6 +1,6 @@
 import { useState } from "react";
 import type { RxDocument } from "rxdb";
-import { Trash2 } from "lucide-react";
+import { ArrowRight, Trash2 } from "lucide-react";
 import type { TaskDocType, ChecklistStatusKeys } from "@/types/schemas";
 import type { TaskFormValues } from "@/types/forms";
 import { Button } from "@/components/ui/button";
@@ -18,6 +18,7 @@ import { TaskFilter } from "./TaskFilter";
 import { EmptyState } from "./EmptyState";
 import { DeleteConfirmationModal } from "./DeleteConfirmationModal";
 import useTaskStore from "@/stores/taskStore";
+import { Link } from "react-router";
 
 export default function TaskList() {
   const tasks = useTaskStore((state) => state.tasks);
@@ -140,7 +141,15 @@ export default function TaskList() {
                       ? "Create a new task to get started."
                       : "Try adjusting your filters to find what you're looking for."
                   }
-                />
+                >
+                  {tasks.length === 0 && (
+                    <Link to="/floor-plan">
+                      <Button variant="ghost">
+                        See floor plan <ArrowRight />{" "}
+                      </Button>
+                    </Link>
+                  )}
+                </EmptyState>
               </TableCell>
             </TableRow>
           )}

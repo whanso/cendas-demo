@@ -32,7 +32,6 @@ const getInitials = (name = "") => {
 
 interface ConstructionPlanKonvaProps {
   imageUrl: string;
-  pinColor?: string;
 }
 
 export default function InteractiveCanvas({

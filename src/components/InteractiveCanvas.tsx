@@ -1,15 +1,20 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Stage, Layer, Image, Shape } from "react-konva";
 import Konva from "konva";
 import useImage from "use-image";
-import type { TaskDocType } from "@/types/schemas";
+import useTaskStore from "@/stores/taskStore";
+import useUserStore from "@/stores/userStore";
 import { DeleteConfirmationModal } from "./DeleteConfirmationModal";
+import { TaskModal } from "./TaskModal";
+import { TaskFormValues } from "@/types/forms";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import type { TaskDocType } from "@/types/schemas";
+import type { RxDocument } from "rxdb";
 
 // by default Konva prevent some events when node is dragging
 // it improve the performance and work well for 95% of cases
@@ -17,26 +22,30 @@ import {
 // so it triggers touchmove correctly.
 (window as any).Konva.hitOnDragEnabled = true;
 
+const getInitials = (name = "") => {
+  const words = name.split(" ");
+  if (words.length > 1 && words[1]) {
+    return (words[0][0] + words[words.length - 1][0]).toUpperCase();
+  }
+  return name.substring(0, 2).toUpperCase();
+};
+
 interface ConstructionPlanKonvaProps {
   imageUrl: string;
-  tasks?: Array<TaskDocType>;
   pinColor?: string;
 }
 
 export default function InteractiveCanvas({
   imageUrl,
 }: ConstructionPlanKonvaProps) {
+  const tasks = useTaskStore((state) => state.tasks);
+  const addTask = useTaskStore((state) => state.addTask);
+  const updatePinPosition = useTaskStore((state) => state.updatePinPosition);
+  const deleteTask = useTaskStore((state) => state.deleteTask);
+  const updateTask = useTaskStore((state) => state.updateTask);
+  const usersMap = useUserStore((state) => state.usersMap);
   const stageRef = useRef<Konva.Stage>(null);
   const [image] = useImage(imageUrl, "anonymous");
-  const [taskList, setTaskList] = useState<Array<any>>([
-    {
-      x: 959.7698097033505,
-      y: 366.02753430245855,
-      radius: 20,
-      fill: "red",
-      id: "1753208688013",
-    },
-  ]);
   // Reference to parent container
   const containerRef = useRef<HTMLDivElement>(null);
   const lastCenter = useRef<{ x: number; y: number } | null>(null);
@@ -63,6 +72,23 @@ export default function InteractiveCanvas({
   });
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [pinToDelete, setPinToDelete] = useState<string | null>(null);
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [newPinCoords, setNewPinCoords] = useState<{
+    x: number;
+    y: number;
+  } | null>(null);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [taskToEdit, setTaskToEdit] = useState<RxDocument<TaskDocType> | null>(
+    null
+  );
+
+  const tasksWithPins = useMemo(
+    () =>
+      tasks.filter(
+        (task) => task.position?.x != null && task.position?.y != null
+      ),
+    [tasks]
+  );
 
   // Function to handle resize
   const updateSize = useCallback(() => {
@@ -155,23 +181,27 @@ export default function InteractiveCanvas({
       return;
     }
 
-    // Don't add a pin on drag.
     if (e.target.isDragging()) {
       return;
     }
-    const pos = e.target.getStage()?.getRelativePointerPosition();
-    if (!pos) return;
-    // Add new circle
-    setTaskList([
-      ...taskList,
-      {
-        x: pos.x,
-        y: pos.y,
-        radius: 20,
-        fill: "red",
-        id: Date.now().toString(),
-      },
-    ]);
+    const stage = e.target.getStage();
+    const pos = stage?.getRelativePointerPosition();
+    if (pos) {
+      setNewPinCoords(pos);
+      setIsCreateModalOpen(true);
+    }
+  };
+
+  const handleCreateTask = async (data: TaskFormValues) => {
+    if (newPinCoords) {
+      await addTask(data, newPinCoords);
+    }
+  };
+
+  const handleUpdateTask = async (data: TaskFormValues) => {
+    if (taskToEdit) {
+      await updateTask(taskToEdit.taskId, data);
+    }
   };
 
   const getDistance = (
@@ -267,7 +297,7 @@ export default function InteractiveCanvas({
   };
 
   const handlePinClick = (
-    e: Konva.KonvaEventObject<MouseEvent | Event>,
+    e: Konva.KonvaEventObject<MouseEvent | TouchEvent>,
     taskId: string
   ) => {
     e.evt.preventDefault();
@@ -292,19 +322,41 @@ export default function InteractiveCanvas({
     setIsDeleteModalOpen(true);
   };
 
-  const handleConfirmDelete = () => {
-    if (!pinToDelete) return;
-    setTaskList((prevTasks) =>
-      prevTasks.filter((task) => task.id !== pinToDelete)
-    );
-    setIsDeleteModalOpen(false);
+  const handleEditPin = () => {
+    if (!contextMenu.taskId) return;
+    const task = tasks.find((t) => t.taskId === contextMenu.taskId);
+    if (task) {
+      setTaskToEdit(task);
+      setIsEditModalOpen(true);
+    }
   };
 
-  const handleDragEnd = (e: Konva.KonvaEventObject<DragEvent>) => {
-    // This handler is attached to the Stage, but it will fire for drags
-    // on any child node that is draggable. We need to differentiate.
+  const handleConfirmDelete = async () => {
+    if (!pinToDelete) return;
+    const taskDoc = tasks.find((t) => t.taskId === pinToDelete);
+    if (taskDoc) {
+      await deleteTask(taskDoc);
+    }
+    setIsDeleteModalOpen(false);
+    setPinToDelete(null);
+  };
 
-    // If the dragged node is the Stage itself
+  const handlePinDragStart = () => {
+    if (contextMenu.visible) {
+      setContextMenu({ ...contextMenu, visible: false });
+    }
+  };
+
+  const handlePinDragEnd = (e: Konva.KonvaEventObject<DragEvent>) => {
+    // A pin was dragged, update its position in the store
+    const shape = e.target;
+    const id = shape.id(); // Assumes the shape's id is set to the task's id
+    updatePinPosition(id, { x: shape.x(), y: shape.y() });
+  };
+
+  const handleStageDragEnd = (e: Konva.KonvaEventObject<DragEvent>) => {
+    // This handler is for the stage itself.
+    // We only update the stage transform if the stage was the drag target.
     if (e.target.className === "Stage") {
       const stage = e.target as Konva.Stage;
       setStageTransform({
@@ -312,19 +364,7 @@ export default function InteractiveCanvas({
         x: stage.x(),
         y: stage.y(),
       });
-      return;
     }
-
-    // If the dragged node is a pin (Shape)
-    const shape = e.target;
-    const id = shape.id(); // Assumes the shape's id is set to the task's id
-
-    // Update the position of the dragged pin in our state
-    setTaskList((prevTasks) =>
-      prevTasks.map((task) =>
-        task.id === id ? { ...task, x: shape.x(), y: shape.y() } : task
-      )
-    );
   };
 
   // Update on mount, when window resizes, or when image loads
@@ -352,7 +392,7 @@ export default function InteractiveCanvas({
         onWheel={handleWheel}
         onClick={handleStageClick}
         onTap={handleStageClick}
-        onDragEnd={handleDragEnd}
+        onDragEnd={handleStageDragEnd}
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
       >
@@ -360,53 +400,63 @@ export default function InteractiveCanvas({
           <Image image={image} />
         </Layer>
         <Layer id="pins-layer">
-          {taskList.map((task) => (
-            <Shape
-              key={task.id}
-              id={task.id}
-              x={task.x}
-              y={task.y}
-              width={30}
-              height={45}
-              offsetX={30 / 2}
-              offsetY={45}
-              scaleX={1 / stageTransform.scale}
-              scaleY={1 / stageTransform.scale}
-              onClick={(e) => handlePinClick(e, task.id)}
-              onTap={(e) => handlePinClick(e, task.id)}
-              sceneFunc={function (context, shape) {
-                const width = shape.width();
-                const height = shape.height();
-                const radius = width / 2;
+          {tasksWithPins.map((task) => {
+            const taskUser = usersMap.get(task.userId);
+            return (
+              <Shape
+                key={task.taskId}
+                id={task.taskId}
+                x={task.position.x}
+                y={task.position.y}
+                width={30}
+                height={45}
+                offsetX={30 / 2}
+                offsetY={45}
+                scaleX={1 / stageTransform.scale}
+                scaleY={1 / stageTransform.scale}
+                onClick={(e) => handlePinClick(e, task.taskId)}
+                onTap={(e) => handlePinClick(e, task.taskId)}
+                onDragStart={handlePinDragStart}
+                onDragEnd={handlePinDragEnd}
+                sceneFunc={function (context, shape) {
+                  const width = shape.width();
+                  const height = shape.height();
+                  const radius = width / 2;
 
-                context.beginPath();
-                context.moveTo(0, radius); // Start at left side of circle
-                // Top arc
-                context.arc(radius, radius, radius, Math.PI, 0, false);
-                // Right curve to tip
-                context.quadraticCurveTo(width, height * 0.65, radius, height);
-                // Left curve from tip to start
-                context.quadraticCurveTo(0, height * 0.65, 0, radius);
-                context.closePath();
+                  context.beginPath();
+                  context.moveTo(0, radius); // Start at left side of circle
+                  // Top arc
+                  context.arc(radius, radius, radius, Math.PI, 0, false);
+                  // Right curve to tip
+                  context.quadraticCurveTo(
+                    width,
+                    height * 0.65,
+                    radius,
+                    height
+                  );
+                  // Left curve from tip to start
+                  context.quadraticCurveTo(0, height * 0.65, 0, radius);
+                  context.closePath();
 
-                // (!) Konva specific method, it is very important
-                context.fillStrokeShape(shape);
+                  // (!) Konva specific method, it is very important
+                  context.fillStrokeShape(shape);
 
-                // Add text inside the pin
-                const text = "AB";
-                context.font = "bold 13px Arial";
-                context.fillStyle = "white";
-                context.textAlign = "center";
-                context.textBaseline = "middle";
-                // Position text in the center of the circular part of the pin
-                context.fillText(text, radius, radius);
-              }}
-              fill="#E53E3E" // A classic red for a pin
-              stroke="black"
-              strokeWidth={2}
-              draggable
-            />
-          ))}
+                  // Add text inside the pin
+                  const text = getInitials(taskUser?.username);
+                  context.font = "bold 13px Arial";
+                  context.fillStyle = "white";
+                  context.textAlign = "center";
+                  context.textBaseline = "middle";
+                  // Position text in the center of the circular part of the pin
+                  context.fillText(text, radius, radius);
+                }}
+                fill={taskUser?.userColor || "#E53E3E"}
+                stroke="black"
+                strokeWidth={2}
+                draggable
+              />
+            );
+          })}
         </Layer>
       </Stage>
       <DropdownMenu
@@ -426,7 +476,7 @@ export default function InteractiveCanvas({
           }}
         />
         <DropdownMenuContent>
-          <DropdownMenuItem>Edit</DropdownMenuItem>
+          <DropdownMenuItem onClick={handleEditPin}>Edit</DropdownMenuItem>
           <DropdownMenuItem className="text-red-500" onClick={handleDeletePin}>
             Delete
           </DropdownMenuItem>
@@ -438,6 +488,19 @@ export default function InteractiveCanvas({
         onConfirm={handleConfirmDelete}
         title="Are you sure you want to delete this pin?"
         description="This action cannot be undone. This will permanently delete the pin from the floor plan."
+      />
+      <TaskModal
+        isOpen={isCreateModalOpen}
+        onClose={() => setIsCreateModalOpen(false)}
+        mode="create"
+        onSubmit={handleCreateTask}
+      />
+      <TaskModal
+        isOpen={isEditModalOpen}
+        onClose={() => setIsEditModalOpen(false)}
+        mode="edit"
+        task={taskToEdit}
+        onSubmit={handleUpdateTask}
       />
     </div>
   );

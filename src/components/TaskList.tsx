@@ -1,9 +1,8 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import type { RxDocument } from "rxdb";
 import { Trash2 } from "lucide-react";
-import { useAuth } from "@/auth";
-import { useDatabase } from "@/components/DatabaseProvider";
 import type { TaskDocType, ChecklistStatusKeys } from "@/types/schemas";
+import type { TaskFormValues } from "@/types/forms";
 import { Button } from "@/components/ui/button";
 import { TaskStatus, getTaskStatus } from "@/components/TaskStatus";
 import {
@@ -18,13 +17,13 @@ import { TaskModal } from "./TaskModal";
 import { TaskFilter } from "./TaskFilter";
 import { EmptyState } from "./EmptyState";
 import { DeleteConfirmationModal } from "./DeleteConfirmationModal";
+import useTaskStore from "@/stores/taskStore";
 
 export default function TaskList() {
-  const db = useDatabase();
-  const { user } = useAuth();
-  const [tasks, setTasks] = useState<RxDocument<TaskDocType>[]>([]);
+  const tasks = useTaskStore((state) => state.tasks);
+  const deleteTask = useTaskStore((state) => state.deleteTask);
+  const updateTask = useTaskStore((state) => state.updateTask);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [modalMode, setModalMode] = useState<"create" | "edit">("create");
   const [selectedTask, setSelectedTask] =
     useState<RxDocument<TaskDocType> | null>(null);
   const [statusFilter, setStatusFilter] = useState<ChecklistStatusKeys | "ALL">(
@@ -34,30 +33,7 @@ export default function TaskList() {
   const [taskToDelete, setTaskToDelete] =
     useState<RxDocument<TaskDocType> | null>(null);
 
-  useEffect(() => {
-    if (!db?.tasks || !user?.userId) return;
-
-    const subscription = db.tasks
-      .find({
-        selector: {
-          userId: user.userId,
-        },
-        sort: [{ timestamp: "asc" }],
-      })
-      .$.subscribe((tasks) => {
-        if (tasks) {
-          setTasks(tasks);
-        }
-      });
-
-    return () => subscription.unsubscribe();
-  }, [db, user]);
-
-  const handleOpenModal = (
-    mode: "create" | "edit",
-    task: RxDocument<TaskDocType> | null = null
-  ) => {
-    setModalMode(mode);
+  const handleOpenModal = (task: RxDocument<TaskDocType>) => {
     setSelectedTask(task);
     setIsModalOpen(true);
   };
@@ -72,9 +48,15 @@ export default function TaskList() {
     setIsDeleteModalOpen(true);
   };
 
+  const handleUpdateTask = async (data: TaskFormValues) => {
+    if (selectedTask) {
+      await updateTask(selectedTask.taskId, data);
+    }
+  };
+
   const handleConfirmDelete = async () => {
     if (taskToDelete) {
-      await taskToDelete.remove();
+      await deleteTask(taskToDelete);
       setIsDeleteModalOpen(false);
       setTaskToDelete(null);
     }
@@ -91,7 +73,6 @@ export default function TaskList() {
     <div className="p-4 max-w-6xl mx-auto">
       <div className="flex justify-between items-center mb-4">
         <h1 className="text-2xl font-bold">My Tasks</h1>
-        <Button onClick={() => handleOpenModal("create")}>Add Task</Button>
       </div>
       <TaskFilter
         statusFilter={statusFilter}
@@ -116,7 +97,7 @@ export default function TaskList() {
               return (
                 <TableRow
                   key={task.taskId}
-                  onClick={() => handleOpenModal("edit", task)}
+                  onClick={() => handleOpenModal(task)}
                   className="cursor-pointer"
                 >
                   <TableCell>
@@ -159,13 +140,7 @@ export default function TaskList() {
                       ? "Create a new task to get started."
                       : "Try adjusting your filters to find what you're looking for."
                   }
-                >
-                  {tasks.length === 0 && (
-                    <Button onClick={() => handleOpenModal("create")}>
-                      Create Task
-                    </Button>
-                  )}
-                </EmptyState>
+                />
               </TableCell>
             </TableRow>
           )}
@@ -174,8 +149,9 @@ export default function TaskList() {
       <TaskModal
         isOpen={isModalOpen}
         onClose={handleCloseModal}
-        mode={modalMode}
+        mode="edit"
         task={selectedTask}
+        onSubmit={handleUpdateTask}
       />
       <DeleteConfirmationModal
         isOpen={isDeleteModalOpen}

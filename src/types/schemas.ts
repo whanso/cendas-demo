@@ -72,6 +72,18 @@ export const taskSchemaLiteral = {
         required: ["item", "status"],
       },
     },
+    position: {
+      type: "object",
+      properties: {
+        x: {
+          type: "number",
+        },
+        y: {
+          type: "number",
+        },
+      },
+      required: ["x", "y"],
+    },
     timestamp: {
       type: "string",
       format: "date-time",
@@ -81,7 +93,7 @@ export const taskSchemaLiteral = {
       maxLength: 100,
     },
   },
-  required: ["taskId", "title", "checklist", "timestamp", "userId"],
+  required: ["taskId", "title", "checklist", "timestamp", "userId", "position"],
   indexes: ["userId"],
 } as const;
 

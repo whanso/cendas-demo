@@ -2,8 +2,6 @@ import { useEffect } from "react";
 import type { RxDocument } from "rxdb";
 import { useForm, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useAuth } from "@/auth";
-import { useDatabase } from "@/components/DatabaseProvider";
 import {
   CHECKLIST_STATUS,
   type ChecklistStatus,
@@ -38,25 +36,28 @@ import {
 } from "@/components/ui/form";
 import { ChevronDown, Plus, Trash2 } from "lucide-react";
 import { StatusIcon } from "./StatusIcon";
+import useTaskStore from "@/stores/taskStore";
+
+const initialCreateValues: TaskFormValues = {
+  title: "",
+  checklist: [{ item: "Placeholder item", status: "NOT_STARTED" }],
+};
 
 interface TaskModalProps {
   isOpen: boolean;
   onClose: () => void;
   mode: "create" | "edit";
   task?: RxDocument<TaskDocType> | null;
+  onSubmit: (data: TaskFormValues) => Promise<void>;
 }
 
-export function TaskModal({ isOpen, onClose, mode, task }: TaskModalProps) {
-  const db = useDatabase();
-  const { user } = useAuth();
-
+export function TaskModal({
+  isOpen, onClose, mode, task, onSubmit,
+}: TaskModalProps) {
   const form = useForm<TaskFormValues>({
     resolver: zodResolver(taskFormSchema),
-    mode: "onBlur",
-    defaultValues: {
-      title: "",
-      checklist: [{ item: "Placeholder item", status: "NOT_STARTED" }],
-    },
+    mode: "onSubmit",
+    defaultValues: initialCreateValues,
   });
 
   const { fields, append, remove } = useFieldArray({
@@ -72,37 +73,14 @@ export function TaskModal({ isOpen, onClose, mode, task }: TaskModalProps) {
           checklist: task.checklist || [],
         });
       } else {
-        form.reset({
-          title: "",
-          checklist: [{ item: "Placeholder item", status: "NOT_STARTED" }],
-        });
+        form.reset(initialCreateValues);
       }
     }
   }, [isOpen, mode, task, form]);
 
-  const onSubmit = async (data: TaskFormValues) => {
-    if (!db?.tasks || !user?.userId) return;
-
-    const finalChecklist = data.checklist.filter(
-      (item) => item.item.trim() !== ""
-    );
-
-    if (mode === "create") {
-      const newTask: TaskDocType = {
-        taskId: crypto.randomUUID(),
-        title: data.title.trim(),
-        checklist: finalChecklist,
-        userId: user.userId,
-        timestamp: new Date().toISOString(),
-      };
-      await db.tasks.insert(newTask);
-    } else if (mode === "edit" && task) {
-      await task.patch({
-        title: data.title.trim(),
-        checklist: finalChecklist,
-      });
-    }
-
+  const handleFormSubmit = async (data: TaskFormValues) => {
+    // The parent component now handles the submission logic.
+    await onSubmit(data);
     onClose();
   };
 
@@ -116,17 +94,15 @@ export function TaskModal({ isOpen, onClose, mode, task }: TaskModalProps) {
     <Dialog open={isOpen} onOpenChange={handleOpenChange}>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
-          <DialogTitle>
-            {mode === "create" ? "Create Task" : "Edit Task"}
-          </DialogTitle>
+          <DialogTitle>{mode === "create" ? "Create Task" : "Edit Task"}</DialogTitle>
           <DialogDescription>
             {mode === "create"
-              ? "Fill in the details to create a new task."
+              ? "Fill in the details for the new task."
               : "Make changes to your task here. Click save when you're done."}
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+          <form onSubmit={form.handleSubmit(handleFormSubmit)} className="space-y-4">
             <FormField
               control={form.control}
               name="title"

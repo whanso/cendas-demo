@@ -1,21 +1,15 @@
-import { useAuth } from "@/auth";
 import TaskList from "@/components/TaskList";
-import { LoginForm } from "./login";
+import { useTaskStoreInitializer } from "@/hooks/useTaskStoreInitializer";
+import { useUserStoreInitializer } from "@/hooks/useUserStoreInitializer";
 
 export default function TasksPage() {
-  const { user, isLoading } = useAuth();
-
-  if (isLoading) {
-    return <div>Loading session...</div>;
-  }
-
-  if (user) {
-    return <TaskList />;
-  }
+  // This hook initializes the store and sets up the RxDB subscription.
+  useTaskStoreInitializer();
+  useUserStoreInitializer();
 
   return (
-    <div className="flex justify-center items-center h-screen">
-      <LoginForm />
+    <div className="flex-grow">
+      <TaskList />
     </div>
   );
 }

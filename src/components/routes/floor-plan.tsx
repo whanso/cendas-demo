@@ -1,20 +1,17 @@
-import { useAuth } from "@/auth";
-import InteractiveCanvas from "../InteractiveCanvas";
-import { LoginForm } from "./login";
+import InteractiveCanvas from "@/components/InteractiveCanvas";
+import { useTaskStoreInitializer } from "@/hooks/useTaskStoreInitializer";
+import { useUserStoreInitializer } from "@/hooks/useUserStoreInitializer";
+
+const FLOOR_PLAN_URL = "image.png";
 
 export default function FloorPlan() {
-  const { user, isLoading } = useAuth();
+  // This hook initializes the store and sets up the RxDB subscription.
+  useTaskStoreInitializer();
+  useUserStoreInitializer();
 
-  if (isLoading) {
-    return <div>Loading session...</div>;
-  }
-
-  if (user) {
-    return <InteractiveCanvas imageUrl="image.png" />;
-  }
   return (
-    <div className="flex justify-center items-center h-screen">
-      <LoginForm />
+    <div className="flex-grow">
+      <InteractiveCanvas imageUrl={FLOOR_PLAN_URL} />
     </div>
   );
 }
